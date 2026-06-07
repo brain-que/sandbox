@@ -1,4 +1,6 @@
-from calc import add, subtract, multiply
+import pytest
+
+from calc import add, subtract, multiply, divide
 
 
 def test_add():
@@ -16,3 +18,14 @@ def test_multiply():
     assert multiply(2, 3) == 6
     assert multiply(-2, 3) == -6
     assert multiply(0, 5) == 0
+
+
+def test_divide():
+    assert divide(6, 3) == 2
+    assert divide(-6, 3) == -2
+    assert divide(5, 2) == 2.5
+
+
+def test_divide_by_zero_raises():
+    with pytest.raises(ValueError):
+        divide(1, 0)
