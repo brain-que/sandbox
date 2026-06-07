@@ -1,0 +1,22 @@
+name: verdict
+on:
+  workflow_dispatch:
+    inputs:
+      gate:    { required: true }   # claude | codex
+      sha:     { required: true }
+      verdict: { required: true }   # pass | fail
+permissions:
+  statuses: write
+jobs:
+  sign:
+    runs-on: ubuntu-latest
+    steps:
+      - name: sign gauntlet verdict status
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          STATE=$([ "${{ inputs.verdict }}" = "pass" ] && echo success || echo failure)
+          gh api repos/${{ github.repository }}/statuses/${{ inputs.sha }} \
+            -f state="$STATE" \
+            -f context="gauntlet/${{ inputs.gate }}-approved" \
+            -f description="${{ inputs.gate }}-reviewer verdict"
