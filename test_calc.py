@@ -1,6 +1,6 @@
 import pytest
 
-from calc import add, subtract, multiply, divide, power, modulo
+from calc import add, subtract, multiply, divide, power, modulo, square
 
 
 def test_add():
@@ -40,3 +40,10 @@ def test_modulo():
     assert modulo(10, 3) == 1
     assert modulo(9, 3) == 0
     assert modulo(7, 2) == 1
+
+
+def test_square():
+    assert square(3) == 9
+    assert square(-4) == 16
+    assert square(0) == 0
+    assert square(1.5) == 2.25
