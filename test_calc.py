@@ -1,6 +1,6 @@
 import pytest
 
-from calc import add, subtract, multiply, divide, power
+from calc import add, subtract, multiply, divide, power, modulo
 
 
 def test_add():
@@ -34,3 +34,9 @@ def test_divide_by_zero_raises():
 def test_power():
     assert power(2, 3) == 8
     assert power(5, 0) == 1
+
+
+def test_modulo():
+    assert modulo(10, 3) == 1
+    assert modulo(9, 3) == 0
+    assert modulo(7, 2) == 1
