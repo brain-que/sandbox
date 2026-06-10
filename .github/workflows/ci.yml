@@ -29,9 +29,10 @@ jobs:
             echo "deny-list path touched -> human lane (CODEOWNERS)"; exit 1
           fi
           echo "tier-A: no deny-list path touched"
-      - name: secret scan (gitleaks)
-        uses: gitleaks/gitleaks-action@v2
-        env: { GITHUB_TOKEN: "${{ github.token }}" }
+      - name: secret scan (gitleaks binary, no org license needed)
+        run: |
+          curl -sSL https://github.com/gitleaks/gitleaks/releases/download/v8.21.2/gitleaks_8.21.2_linux_x64.tar.gz | tar -xz -C /tmp gitleaks
+          /tmp/gitleaks dir . --no-banner --redact --exit-code 1
 
   ci-passed:
     needs: [test, risk-classifier]
