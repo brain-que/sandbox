@@ -1,14 +1,44 @@
 name: ci
 on:
-  push:
   pull_request:
+    branches: [main]
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+        with: { python-version: "3.12" }
       - run: pip install pytest
       - run: pytest -q
+
+  risk-classifier:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: FAIL on a deny-list path (forces the human CODEOWNERS lane)
+        run: |
+          set -euo pipefail
+          base="${{ github.event.pull_request.base.sha }}"
+          head="${{ github.event.pull_request.head.sha }}"
+          changed=$(git diff --name-only "$base" "$head")
+          echo "$changed"
+          deny='^\.github/|(^|/)[^/]*\.lock$|(^|/)auth/|(^|/)migrations/|(^|/)(AGENTS|CLAUDE)\.md$'
+          if echo "$changed" | grep -Eq "$deny"; then
+            echo "deny-list path touched -> human lane (CODEOWNERS)"; exit 1
+          fi
+          echo "tier-A: no deny-list path touched"
+      - name: secret scan (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env: { GITHUB_TOKEN: "${{ github.token }}" }
+
+  ci-passed:
+    needs: [test, risk-classifier]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          [ "${{ needs.test.result }}" = success ]            || exit 1
+          [ "${{ needs.risk-classifier.result }}" = success ] || exit 1
+          echo "ci-passed"

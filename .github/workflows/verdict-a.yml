@@ -1,0 +1,54 @@
+name: verdict-a
+# Reviewer-A signs ONLY gauntlet/reviewer-a-approved. The gate is hardcoded (never an
+# input), the job is bound to Reviewer-A's identity via github.triggering_actor, and the
+# status is signed by the Reviewer-A App so the ruleset can pin it by integration_id
+# (adr/0018). verdict-b.yml is the mirror for Reviewer-B. Lock both with CODEOWNERS.
+on:
+  workflow_dispatch:
+    inputs:
+      sha:     { required: true }
+      verdict: { required: true }   # pass | fail
+      issue:   { required: true }
+permissions:
+  contents: read
+jobs:
+  relay:
+    runs-on: ubuntu-latest
+    if: ${{ github.triggering_actor == vars.REVIEWER_A_LOGIN }}
+    steps:
+      # SECURITY: never interpolate ${{ inputs.* }} / actor into a run: shell. A
+      # prompt-injected reviewer controls the dispatch inputs, and this job holds the
+      # REVIEWER_A_APP_KEY signing secret. Pass them through env: and quote "$VAR" so the
+      # values are data, not code (GitHub's documented script-injection mitigation).
+      - name: reject wrong dispatcher (defense in depth)
+        env:
+          ACTOR: ${{ github.triggering_actor }}
+          EXPECTED: ${{ vars.REVIEWER_A_LOGIN }}
+        run: |
+          [ "$ACTOR" = "$EXPECTED" ] || { echo "wrong reviewer identity"; exit 1; }
+      - name: reject stale verdict (SHA pin)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE: ${{ inputs.issue }}
+          SHA: ${{ inputs.sha }}
+          REPO: ${{ github.repository }}
+        run: |
+          HEAD=$(gh pr view "$ISSUE" -R "$REPO" --json headRefOid -q .headRefOid)
+          [ "$HEAD" = "$SHA" ] || { echo "stale"; exit 1; }
+      - name: mint the Reviewer-A App token (fixed signer identity)
+        id: appauth
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.REVIEWER_A_APP_ID }}
+          private-key: ${{ secrets.REVIEWER_A_APP_KEY }}
+      - name: sign status as the Reviewer-A App
+        env:
+          GH_TOKEN: ${{ steps.appauth.outputs.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ inputs.sha }}
+          VERDICT: ${{ inputs.verdict }}
+        run: |
+          STATE=$([ "$VERDICT" = pass ] && echo success || echo failure)
+          gh api "repos/$REPO/statuses/$SHA" \
+            -f state="$STATE" -f context="gauntlet/reviewer-a-approved" \
+            -f description="reviewer-a verdict"

@@ -1,0 +1,10 @@
+# Unbypassable human lane (autodev docs/04). Combined with require_code_owner_review in the
+# ruleset, a change to any path below cannot merge without a human even when both agent gates
+# are green. Keep in sync with the ci.yml risk-classifier deny-list.
+/.github/**        @syshin0116
+**/*.lock          @syshin0116
+**/auth/**         @syshin0116
+**/migrations/**   @syshin0116
+**/AGENTS.md       @syshin0116
+**/CLAUDE.md       @syshin0116
+/CODEOWNERS        @syshin0116
