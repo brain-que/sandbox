@@ -21,3 +21,7 @@ def divide(a: float, b: float) -> float:
 
 def power(a, b):
     return a ** b
+
+
+def modulo(a, b):
+    return a % b
